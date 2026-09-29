@@ -1,5 +1,7 @@
 # pi-mobile
 
+A maintained fork of the original [pi-mobile](https://github.com/badlogic/pi-mobile) project. This fork is currently updated to work with Pi `0.87.1` (`@earendil-works/pi-coding-agent`).
+
 <video src="piwebdemo.mp4" autoplay loop muted playsinline width="400"></video>
 
 Web UI for the `pi` coding agent, built on the `@mariozechner/pi-coding-agent` SDK.
