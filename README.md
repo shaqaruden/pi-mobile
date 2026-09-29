@@ -2,7 +2,7 @@
 
 <video src="piwebdemo.mp4" autoplay loop muted playsinline width="400"></video>
 
-Web UI for the `pi` coding agent, built on the `@mariozechner/pi-coding-agent` SDK.
+Web UI for the `pi` coding agent, built on the `@earendil-works/pi-coding-agent` SDK.
 
 `pi-mobile` runs the agent on whatever machine hosts the server. You connect from any device (laptop, phone, tablet) to control and view sessions through a browser.
 

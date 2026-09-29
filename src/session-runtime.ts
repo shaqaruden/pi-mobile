@@ -1,11 +1,11 @@
 import {
-	AuthStorage,
 	createAgentSession,
 	ModelRegistry,
+	ModelRuntime,
 	SessionManager,
 	type AgentSession,
 	type AgentSessionEvent,
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 import { existsSync } from "node:fs";
 import { mkdirSync } from "node:fs";
 import { stat } from "node:fs/promises";
@@ -165,8 +165,8 @@ function serializeSessionSummary(entry: {
 export class PiWebRuntime {
 	private runningById = new Map<string, RunningSession>();
 	private runningByPath = new Map<string, string>();
-	private authStorage = AuthStorage.create();
-	private modelRegistry = new ModelRegistry(this.authStorage);
+	private modelRuntimePromise = ModelRuntime.create();
+	private modelRegistryPromise = this.modelRuntimePromise.then((runtime) => new ModelRegistry(runtime));
 	private repoStorePath = join(homedir(), ".pi", "agent", "pi-web", "repos.json");
 
 	private async loadReposFromDisk(): Promise<string[]> {
@@ -279,19 +279,11 @@ export class PiWebRuntime {
 	}
 
 	async listModels(): Promise<ApiModelInfo[]> {
-		// Keep auth/models fresh in case keys/models.json changed outside this process (e.g. via native CLI).
-		try {
-			this.authStorage.reload();
-		} catch {
-			// best effort
-		}
-		try {
-			this.modelRegistry.refresh();
-		} catch {
-			// best effort
-		}
+		const modelRegistry = await this.modelRegistryPromise;
+		// Refresh credentials/model configuration changed outside this process.
+		await modelRegistry.refresh().catch(() => undefined);
 
-		const available = this.modelRegistry.getAvailable();
+		const available = modelRegistry.getAvailable();
 		return available.map((model) => ({
 			provider: model.provider,
 			id: model.id,
@@ -360,8 +352,7 @@ export class PiWebRuntime {
 			const { session } = await createAgentSession({
 				cwd,
 				sessionManager,
-				authStorage: this.authStorage,
-				modelRegistry: this.modelRegistry,
+				modelRuntime: await this.modelRuntimePromise,
 			});
 			const runtime = this.registerSession(session, cwd, clientId);
 			return { sessionId: runtime.session.sessionId };
@@ -373,8 +364,7 @@ export class PiWebRuntime {
 		const { session } = await createAgentSession({
 			cwd,
 			sessionManager,
-			authStorage: this.authStorage,
-			modelRegistry: this.modelRegistry,
+			modelRuntime: await this.modelRuntimePromise,
 		});
 		const runtime = this.registerSession(session, cwd, clientId);
 		return { sessionId: runtime.session.sessionId };
@@ -404,18 +394,10 @@ export class PiWebRuntime {
 			const provider = command.provider.trim();
 			const modelId = command.modelId.trim();
 			if (!provider || !modelId) throw new Error("invalid_model");
-			try {
-				this.authStorage.reload();
-			} catch {
-				// best effort
-			}
-			try {
-				this.modelRegistry.refresh();
-			} catch {
-				// best effort
-			}
+			const modelRegistry = await this.modelRegistryPromise;
+			await modelRegistry.refresh().catch(() => undefined);
 
-			const available = this.modelRegistry.getAvailable();
+			const available = modelRegistry.getAvailable();
 			const model = available.find((m) => m.provider === provider && m.id === modelId);
 			if (!model) throw new Error(`model_not_available: ${provider}/${modelId}`);
 			await runtime.session.setModel(model);
@@ -532,7 +514,7 @@ export class PiWebRuntime {
 			runtime.modifiedAtMs = Date.now();
 			this.broadcast(sessionId, { type: "agent_event", event });
 
-			if (event.type === "agent_end" || event.type === "auto_compaction_end") {
+			if (event.type === "agent_end" || event.type === "agent_settled") {
 				this.broadcast(sessionId, { type: "state_patch", patch: buildPatch(session) });
 			}
 		});
