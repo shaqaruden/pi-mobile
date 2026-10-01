@@ -192,10 +192,10 @@ function updateControls() {
 	if (kbEnter) kbEnter.disabled = !hasSession || !isController;
 
 	if (!hasSession) {
-		input.placeholder = "";
+		input.placeholder = "Select a session to begin…";
 	} else if (isController) {
 		input.placeholder = phone
-			? "Type a prompt (Enter key to send, Return key for newline)"
+			? "Message the agent…"
 			: streaming
 				? "Streaming… (Esc to abort, Enter to queue follow-up)"
 				: "Type a prompt (Enter to send, Shift+Enter for newline)";
@@ -285,6 +285,7 @@ if (btnModel) btnModel.addEventListener("click", () => void menuCtrl.openModelMe
 if (btnThinking) btnThinking.addEventListener("click", () => menuCtrl.openThinkingMenu());
 
 if (kbMenu) kbMenu.addEventListener("click", () => sidebarCtrl.toggleOpen());
+document.getElementById("sidebar-close")?.addEventListener("click", () => sidebarCtrl.setOpen(false));
 if (kbEsc) kbEsc.addEventListener("click", () => void sessionCtrl.abortRun());
 if (kbTakeover) kbTakeover.addEventListener("click", () => void sessionCtrl.takeOver());
 if (kbRelease) kbRelease.addEventListener("click", () => void sessionCtrl.release());
@@ -306,6 +307,11 @@ window.addEventListener("keydown", (e) => {
 		if (menuCtrl.isOpen()) {
 			e.preventDefault();
 			menuCtrl.close();
+			return;
+		}
+		if (sidebar.classList.contains("open")) {
+			e.preventDefault();
+			sidebarCtrl.setOpen(false);
 			return;
 		}
 		void sessionCtrl.abortRun();

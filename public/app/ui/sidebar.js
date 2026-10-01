@@ -64,9 +64,13 @@ export function createSidebar({
 	function setOpen(open) {
 		if (!sidebar) return;
 		isOpen = Boolean(open);
+		const trigger = document.getElementById("kb-menu");
+		trigger?.setAttribute("aria-expanded", String(isOpen));
+		if (!isOpen && sidebar.contains(document.activeElement)) trigger?.focus();
 		if (isOpen) {
 			sidebar.classList.add("open");
 			if (sidebarOverlay) sidebarOverlay.classList.add("open");
+			document.getElementById("sidebar-close")?.focus();
 		} else {
 			sidebar.classList.remove("open");
 			if (sidebarOverlay) sidebarOverlay.classList.remove("open");
@@ -124,8 +128,14 @@ export function createSidebar({
 
 	function renderSessions(sessions, view = "active") {
 		sessionsList.innerHTML = "";
+		if (!sessions.length) {
+			const empty = document.createElement("p");
+			empty.className = "sidebar-empty";
+			empty.textContent = "No sessions here yet. Start a new session to begin.";
+			sessionsList.appendChild(empty);
+		}
 		for (const s of sessions) {
-			const row = document.createElement("div");
+			const row = document.createElement("button");
 			row.className = `si${s.id === getActiveSessionId() ? " active" : ""}`;
 			row.dataset.sessionId = s.id;
 
@@ -165,8 +175,14 @@ export function createSidebar({
 
 	function renderRepos(repos) {
 		sessionsList.innerHTML = "";
+		if (!repos.length) {
+			const empty = document.createElement("p");
+			empty.className = "sidebar-empty";
+			empty.textContent = "Add a repository using its absolute path on the host machine.";
+			sessionsList.appendChild(empty);
+		}
 		for (const cwd of repos) {
-			const row = document.createElement("div");
+			const row = document.createElement("button");
 			row.className = "si";
 			row.dataset.repoCwd = cwd;
 
@@ -292,6 +308,14 @@ export function createSidebar({
 			sessionsList.appendChild(row);
 		}
 	}
+
+	sidebar?.addEventListener("keydown", (event) => {
+		if (!isOpen || event.key !== "Tab") return;
+		const controls = [...sidebar.querySelectorAll("button:not(:disabled)")].filter(el => el.getClientRects().length);
+		const first = controls[0], last = controls.at(-1);
+		if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+		else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+	});
 
 	updateHeader();
 

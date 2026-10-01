@@ -68,9 +68,10 @@ export function createToolBoxManager({ msgsEl, scrollToBottom }) {
 			const label = isBash ? `${remaining} earlier lines` : `${remaining} more lines`;
 			trunc.appendChild(document.createTextNode(`... (${label}, `));
 
-			const key = document.createElement("span");
+			const key = document.createElement("button");
 			key.className = "exp-key";
-			key.textContent = "click";
+			key.textContent = entry.expanded ? "Collapse" : "Expand";
+			key.setAttribute("aria-expanded", String(entry.expanded));
 			key.addEventListener("click", () => {
 				entry.expanded = true;
 				renderToolBoxText(toolCallId);
@@ -97,9 +98,10 @@ export function createToolBoxManager({ msgsEl, scrollToBottom }) {
 		full.textContent = text;
 		entry.out.appendChild(full);
 
-		const key = document.createElement("span");
+		const key = document.createElement("button");
 		key.className = "exp-key";
-		key.textContent = "click";
+		key.textContent = entry.expanded ? "Collapse" : "Expand";
+			key.setAttribute("aria-expanded", String(entry.expanded));
 		key.addEventListener("click", () => {
 			entry.expanded = false;
 			renderToolBoxText(toolCallId);

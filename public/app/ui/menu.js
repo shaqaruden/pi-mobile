@@ -39,6 +39,7 @@ export function createMenu({
 	getActiveState,
 }) {
 	let open = false;
+	let invoker = null;
 	let cachedModels = null;
 	let cachedModelsAtMs = 0;
 
@@ -47,6 +48,7 @@ export function createMenu({
 		open = false;
 		menuOverlay.classList.remove("open");
 		menuPanel.innerHTML = "";
+		invoker?.focus();
 	}
 
 	function position(anchor) {
@@ -80,12 +82,14 @@ export function createMenu({
 	function openMenu(anchor, build) {
 		if (!menuOverlay || !menuPanel) return;
 		open = true;
+		invoker = anchor;
 		menuOverlay.classList.add("open");
 		menuPanel.innerHTML = "";
 		menuPanel.style.left = "0px";
 		menuPanel.style.top = "0px";
 		build(menuPanel);
 		position(anchor);
+		menuPanel.querySelector("input, button")?.focus();
 	}
 
 	async function getAvailableModels() {
@@ -126,6 +130,11 @@ export function createMenu({
 			const title = document.createElement("div");
 			title.className = "menu-title";
 			title.textContent = "Model";
+			const dismiss = document.createElement("button");
+			dismiss.className = "menu-mini";
+			dismiss.textContent = "Close";
+			dismiss.addEventListener("click", close);
+			hdr.appendChild(dismiss);
 			const refresh = document.createElement("button");
 			refresh.className = "menu-mini";
 			refresh.textContent = "Refresh";
@@ -143,6 +152,7 @@ export function createMenu({
 			const search = document.createElement("input");
 			search.className = "menu-search";
 			search.placeholder = "Search models…";
+			search.setAttribute("aria-label", "Search models");
 
 			const list = document.createElement("div");
 			list.className = "menu-list";
@@ -162,7 +172,7 @@ export function createMenu({
 					return;
 				}
 				for (const m of shown) {
-					const item = document.createElement("div");
+					const item = document.createElement("button");
 					item.className = "menu-item";
 					const key = `${m.provider}/${m.id}`;
 					if (currentKey && key === currentKey) item.classList.add("active");
@@ -206,6 +216,7 @@ export function createMenu({
 			(async () => {
 				try {
 					const models = await getAvailableModels();
+					if (!open || !search.isConnected) return;
 					render(models, "");
 					position(btnModel);
 					search.focus();
@@ -241,7 +252,7 @@ export function createMenu({
 			const current = activeState?.thinkingLevel ? String(activeState.thinkingLevel) : "off";
 			const levels = ["off", "minimal", "low", "medium", "high", "xhigh"];
 			for (const level of levels) {
-				const item = document.createElement("div");
+				const item = document.createElement("button");
 				item.className = "menu-item";
 				if (level === current) item.classList.add("active");
 				const primary = document.createElement("div");
@@ -266,6 +277,16 @@ export function createMenu({
 	}
 
 	if (menuScrim) menuScrim.addEventListener("click", () => close());
+	menuPanel?.setAttribute("role", "dialog");
+	menuPanel?.setAttribute("aria-label", "Agent settings");
+	menuPanel?.setAttribute("aria-modal", "true");
+	menuOverlay?.addEventListener("keydown", (event) => {
+		if (event.key !== "Tab") return;
+		const controls = [...menuPanel.querySelectorAll("button:not(:disabled), input")];
+		const first = controls[0], last = controls.at(-1);
+		if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+		else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+	});
 
 	return {
 		close,
